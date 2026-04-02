@@ -21,10 +21,16 @@
 
 import argparse
 from Bio import SeqIO
+from Bio import SeqFeature
 from BCBio import GFF
 import cPickle as pickle
 import utils_os
 import sys
+
+# Biopython compatibility: older versions expose FeatureLocation instead of
+# SimpleLocation, but recent BCBio.GFF expects SimpleLocation.
+if not hasattr(SeqFeature, 'SimpleLocation'):
+    SeqFeature.SimpleLocation = SeqFeature.FeatureLocation
 
 # not currently using genes, but figured it may be useful to have these objects
 # around for future analysis if necessary. Each gene contains a chromosome id

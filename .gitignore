@@ -1,0 +1,6 @@
+# container files
+*.tar.gz
+*.tar
+*.zip
+*.img
+*.sif

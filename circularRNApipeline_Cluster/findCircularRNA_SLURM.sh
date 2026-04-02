@@ -17,6 +17,7 @@
 
 # Usage (see README for descriptions of parameters):
 #    sh findCircularRNA_SLURM.sh read_directory read_id_style alignment_parent_directory dataset_name junction_overlap [mode] [report_directory_name] [ntrim] [denovoCircMode] [junction_id_suffix] 
+#    Optional final argument: [index_dir] path to a directory containing bowtie2 index files.
 #    And then run again with same parameters as before but append "_unaligned" to the mode parameter
 
 # very basic error checking
@@ -71,6 +72,13 @@ then
   JUNCTION_MIDPOINT=${13}
 else
   JUNCTION_MIDPOINT=150
+fi
+
+if [ $# -ge 14 ]
+then
+  INDEX_DIR=${14}
+else
+  INDEX_DIR=${CODE_DIR}/index
 fi
 
 # change resource allocations based on job size
@@ -240,10 +248,10 @@ then
     j_id=`sbatch -J DeNovoAlign${DATASET_NAME}${DENOVOCIRC} ${RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${ALIGN_MAX_RT} --mem=6000 -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignDeNovo${DENOVOCIRC}_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignDeNovo${DENOVOCIRC}_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE denovo_${DATASET_NAME}_${DENOVOCIRC} denovo denovo_${DATASET_NAME}_onlycircles${DENOVOCIRC}.fa | awk '{print $4}'`
     depend_str="--depend=afterok:"${j_id}
   else
-    g_id=`sbatch -J GenomeAlign${DATASET_NAME} ${RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${ALIGN_MAX_RT} --mem=${GENOME_VMEM} -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignGenome_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignGenome_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_genome genome ${bt_prefix}_genome.fa | awk '{print $4}'`
-    j_id=`sbatch -J JunctionAlign${DATASET_NAME} ${JUNCTION_RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${JUNCTION_ALIGN_MAX_RT} --mem=${JUNC_VMEM} -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignJunction_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignJunction_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_junctions_scrambled junction ${bt_prefix}_junctions_scrambled.fa | awk '{print $4}'`
-    r_id=`sbatch -J RiboAlign${DATASET_NAME} ${RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${ALIGN_MAX_RT} --mem=${RIBO_VMEM} -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignRibo_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignRibo_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_ribosomal ribo ${bt_prefix}_ribosomal.fa | awk '{print $4}'`
-    reg_id=`sbatch -J RegAlign${DATASET_NAME} ${JUNCTION_RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${JUNCTION_ALIGN_MAX_RT} --mem=${REG_VMEM} -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignReg_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignReg_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_junctions_reg reg ${bt_prefix}_junctions_reg.fa | awk '{print $4}'`  
+    g_id=`sbatch -J GenomeAlign${DATASET_NAME} ${RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${ALIGN_MAX_RT} --mem=${GENOME_VMEM} -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignGenome_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignGenome_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_genome genome ${INDEX_DIR}/${bt_prefix}_genome.fa | awk '{print $4}'`
+    j_id=`sbatch -J JunctionAlign${DATASET_NAME} ${JUNCTION_RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${JUNCTION_ALIGN_MAX_RT} --mem=${JUNC_VMEM} -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignJunction_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignJunction_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_junctions_scrambled junction ${INDEX_DIR}/${bt_prefix}_junctions_scrambled.fa | awk '{print $4}'`
+    r_id=`sbatch -J RiboAlign${DATASET_NAME} ${RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${ALIGN_MAX_RT} --mem=${RIBO_VMEM} -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignRibo_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignRibo_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_ribosomal ribo ${INDEX_DIR}/${bt_prefix}_ribosomal.fa | awk '{print $4}'`
+    reg_id=`sbatch -J RegAlign${DATASET_NAME} ${JUNCTION_RESOURCE_FLAG} --array=1-${NUM_FILES} --time=${JUNCTION_ALIGN_MAX_RT} --mem=${REG_VMEM} -D ${CODE_DIR}/index -o ${LOG_DIR}/align/${DATASET_NAME}AlignReg_%A_%a.out -e ${LOG_DIR}/align/${DATASET_NAME}AlignReg_%A_%a.err analysis/align.sh SLURM $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_junctions_reg reg ${INDEX_DIR}/${bt_prefix}_junctions_reg.fa | awk '{print $4}'`  
     depend_str="--depend=afterok:${g_id}:${j_id}:${r_id}:${reg_id}"
   fi
 fi

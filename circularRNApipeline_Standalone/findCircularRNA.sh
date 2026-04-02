@@ -12,6 +12,9 @@
 #Rd2 threshold. 
 #text appended to junction id output directory. Default none
 #junction midpoint. Default 150
+#optional index directory (default: ./index)
+
+SCRIPT_DIR=`pwd`
 
 # some error checking
 if [ $# -eq 11 ]
@@ -65,6 +68,13 @@ then
   JUNCTION_MIDPOINT=${13}
 else
   JUNCTION_MIDPOINT=150
+fi
+
+if [ $# -ge 14 ]
+then
+  INDEX_DIR=${14}
+else
+  INDEX_DIR=${SCRIPT_DIR}/index
 fi
 
 # a few special flags for the unaligned mode
@@ -132,13 +142,11 @@ NUM_FILES=`cat $TASK_DATA_FILE | wc -l`
 # alignments
 if [[ $MODE != *analysis* ]]
 then
-  # have to be inside the index directory so bowtie can find the indices
+  # unaligned mode still uses denovo index outputs under denovo_scripts
   # this block will not be run when called for R2 because we pass the string unalign instead of unaligned
   if [[ $MODE = *unaligned* ]]
   then
     cd denovo_scripts
-  else
-    cd index
   fi
   
   for (( i=1; i<=NUM_FILES; i++ ))
@@ -148,11 +156,11 @@ then
     echo "MODE is $MODE"
     if [[ $MODE = *unaligned* ]]
     then
-      ../analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE denovo_${DATASET_NAME}_${DENOVOCIRC} denovo denovo_${DATASET_NAME}_onlycircles${DENOVOCIRC}.fa &
+      ${SCRIPT_DIR}/analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE denovo_${DATASET_NAME}_${DENOVOCIRC} denovo denovo_${DATASET_NAME}_onlycircles${DENOVOCIRC}.fa &
       echo "Launched align into the background "`date`
     else
-      ../analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_genome genome ${bt_prefix}_genome.fa &
-      ../analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_ribosomal ribo ${bt_prefix}_ribosomal.fa &
+      ${SCRIPT_DIR}/analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_genome genome ${INDEX_DIR}/${bt_prefix}_genome.fa &
+      ${SCRIPT_DIR}/analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_ribosomal ribo ${INDEX_DIR}/${bt_prefix}_ribosomal.fa &
       echo "Launched 2 align.sh's into the background "`date`
     fi
     run_count=`ps -ealf | grep align.sh | grep ${USER} | grep ${DATASET_NAME} | grep -v grep | wc -l`
@@ -180,8 +188,8 @@ then
     do
       READ_FILE=`awk 'FNR == '${i}' {print $1}' $TASK_DATA_FILE`
       SAMPLE_ID=`awk 'FNR == '${i}' {print $2}' $TASK_DATA_FILE`
-      ../analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_junctions_scrambled junction ${bt_prefix}_junctions_scrambled.fa &
-      ../analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_junctions_reg reg ${bt_prefix}_junctions_reg.fa &
+      ${SCRIPT_DIR}/analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_junctions_scrambled junction ${INDEX_DIR}/${bt_prefix}_junctions_scrambled.fa &
+      ${SCRIPT_DIR}/analysis/align.sh $READ_FILE $SAMPLE_ID $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_junctions_reg reg ${INDEX_DIR}/${bt_prefix}_junctions_reg.fa &
       echo "Launched 2 junction aligns into the background "`date`
       
       # only want to launch for 1 sample at a time and then wait for completion so we don't overwhelm the server
@@ -194,8 +202,11 @@ then
     done
     echo 'All junction align.sh are done'`date`
   fi
-  # then change back so relative paths below work  
-  cd ..
+  # then change back so relative paths below work
+  if [[ $MODE = *unaligned* ]]
+  then
+    cd ..
+  fi
 fi
 
 echo "ready to preprocess"

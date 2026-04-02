@@ -1,3 +1,6 @@
+# About
+KNIFE-local is a fork of the original KNIFE code that is designed to build custom indexes in user-specified directories and run the pipeline using those custom indexes. This allows users to run KNIFE on custom genomes or with custom annotations and is suitable for using it in containers.
+
 # KNIFE
 Known and Novel IsoForm Explorer. Statistically based splicing detection for circular and linear isoforms from RNA-Seq data.
 
@@ -28,6 +31,65 @@ Annotated junction indices are available for Human (hg19), Mouse (mm10), Rat (rn
 
 # Using Other Genomes
 Code and instructions for creating a new index are provided in createJunctionIndex.
+
+## Using a Specific Index Directory
+
+You can now build KNIFE junction indices into a custom directory (instead of the default pipeline `index` directory), and you can run KNIFE using that same custom location.
+
+### 1. Build index into a specific directory
+
+From `createJunctionIndex`, run:
+
+```bash
+sh create_knife_index.sh \
+  /path/to/circularRNApipeline_Cluster \
+  /path/to/genome.fa \
+  /path/to/annotation.gtf \
+  /path/to/tmp_build_output \
+  myGenomePrefix \
+  1000000 \
+  gene_name \
+  gene_id \
+  /path/to/custom_index_dir
+```
+
+Notes:
+- The final optional argument is `INDEX_DIR`.
+- If `INDEX_DIR` is omitted, the default is `/path/to/circularRNApipeline_Cluster/index`.
+- The same behavior is available in `createJunctionIndex.sh` with `INDEX_DIR` as its 7th optional argument.
+
+### 2. Call circRNA pipeline with a specific index directory
+
+The run scripts accept `INDEX_DIR` as the final optional argument.
+
+Cluster (SGE):
+
+```bash
+sh findCircularRNA_SGE.sh \
+  READ_DIR READ_STYLE ALIGN_PARDIR DATASET_NAME OVERLAP \
+  MODE REPORTDIR NTRIM DENOVOCIRC JUNCTION_DIR_SUFFIX RD1_THRESH RD2_THRESH JUNCTION_MIDPOINT \
+  /path/to/custom_index_dir
+```
+
+Cluster (SLURM):
+
+```bash
+sh findCircularRNA_SLURM.sh \
+  READ_DIR READ_STYLE ALIGN_PARDIR DATASET_NAME OVERLAP \
+  MODE REPORTDIR NTRIM DENOVOCIRC JUNCTION_DIR_SUFFIX RD1_THRESH RD2_THRESH JUNCTION_MIDPOINT \
+  /path/to/custom_index_dir
+```
+
+Standalone:
+
+```bash
+sh findCircularRNA.sh \
+  READ_DIR READ_STYLE ALIGN_PARDIR DATASET_NAME OVERLAP \
+  MODE REPORTDIR NTRIM DENOVOCIRC JUNCTION_DIR_SUFFIX RD1_THRESH RD2_THRESH JUNCTION_MIDPOINT \
+  /path/to/custom_index_dir
+```
+
+If `INDEX_DIR` is omitted, scripts use their original defaults (`./index` under the code directory).
 
 # Script Parameters
 Running the algorithm is slightly different in the Standalone or Cluster implementaions (see README files within those directories for exact usage information), but the parameters are the same. There are a total of 10 possible parameters, the first 5 are required and defaults for the rest are described here:

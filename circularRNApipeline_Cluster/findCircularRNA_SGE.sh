@@ -17,6 +17,7 @@
 
 # Usage (see README for descriptions of parameters):
 #    sh findCircularRNA_SGE.sh read_directory read_id_style alignment_parent_directory dataset_name junction_overlap [mode] [report_directory_name] [ntrim] [denovoCircMode] [junction_id_suffix] 
+#    Optional final argument: [index_dir] path to a directory containing bowtie2 index files.
 #    And then run again with same parameters as before but append "_unaligned" to the mode parameter
 
 # very basic error checking
@@ -71,6 +72,13 @@ then
   JUNCTION_MIDPOINT=${13}
 else
   JUNCTION_MIDPOINT=150
+fi
+
+if [ $# -ge 14 ]
+then
+  INDEX_DIR=${14}
+else
+  INDEX_DIR=${CODE_DIR}/index
 fi
 
 # change resource allocations based on job size
@@ -166,10 +174,10 @@ then
     qsub -t 1-${NUM_FILES}:1 -N DeNovoAlign${DATASET_NAME}${DENOVOCIRC} -l h_vmem=6G -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE denovo_${DATASET_NAME}_${DENOVOCIRC} denovo denovo_${DATASET_NAME}_onlycircles${DENOVOCIRC}.fa
     depend_str="-hold_jid_ad "DeNovoAlign${DATASET_NAME}${DENOVOCIRC}
   else
-    qsub -t 1-${NUM_FILES}:1 -N GenomeAlign${DATASET_NAME} -l h_vmem=${GENOME_VMEM} -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_genome genome ${bt_prefix}_genome.fa
-    qsub -t 1-${NUM_FILES}:1 -N JunctionAlign${DATASET_NAME} -l h_vmem=${JUNC_VMEM} -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_junctions_scrambled junction ${bt_prefix}_junctions_scrambled.fa
-    qsub -t 1-${NUM_FILES}:1 -N RiboAlign${DATASET_NAME} -l h_vmem=${RIBO_VMEM} -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_ribosomal ribo ${bt_prefix}_ribosomal.fa
-    qsub -t 1-${NUM_FILES}:1 -N RegAlign${DATASET_NAME} -l h_vmem=${REG_VMEM} -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${bt_prefix}_junctions_reg reg ${bt_prefix}_junctions_reg.fa
+    qsub -t 1-${NUM_FILES}:1 -N GenomeAlign${DATASET_NAME} -l h_vmem=${GENOME_VMEM} -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_genome genome ${INDEX_DIR}/${bt_prefix}_genome.fa
+    qsub -t 1-${NUM_FILES}:1 -N JunctionAlign${DATASET_NAME} -l h_vmem=${JUNC_VMEM} -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_junctions_scrambled junction ${INDEX_DIR}/${bt_prefix}_junctions_scrambled.fa
+    qsub -t 1-${NUM_FILES}:1 -N RiboAlign${DATASET_NAME} -l h_vmem=${RIBO_VMEM} -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_ribosomal ribo ${INDEX_DIR}/${bt_prefix}_ribosomal.fa
+    qsub -t 1-${NUM_FILES}:1 -N RegAlign${DATASET_NAME} -l h_vmem=${REG_VMEM} -l h_rt=${ALIGN_MAX_RT} -wd ${CODE_DIR}/index -o ${LOG_DIR}/align/ -e ${LOG_DIR}/align/ analysis/align.sh SGE $TASK_DATA_FILE $ALIGN_PARDIR $DATASET_NAME $MODE ${INDEX_DIR}/${bt_prefix}_junctions_reg reg ${INDEX_DIR}/${bt_prefix}_junctions_reg.fa
     depend_str="-hold_jid_ad "GenomeAlign${DATASET_NAME},JunctionAlign${DATASET_NAME},RiboAlign${DATASET_NAME},RegAlign${DATASET_NAME}
   fi
 fi

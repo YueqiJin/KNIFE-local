@@ -1,0 +1,51 @@
+Bootstrap: docker
+From: dh-mirror.gitverse.ru/mambaorg/micromamba
+Stage: devel
+
+%files
+# copy all repository files from the build context into the image
+./ /opt/KNIFE
+
+%post
+
+# install micromamba and conda-pack
+micromamba install -n base -c conda-forge conda-pack -y || true
+
+# create a Python2 environment for KNIFE (many KNIFE scripts use Python2)
+micromamba create -n knife -c conda-forge -c bioconda -c main python=2.7 biopython bcbio-gff numpy scipy perl bowtie bowtie2 samtools bedtools r-data.table -y || true
+
+# pack the environment and extract into /venv
+micromamba run -n base conda-pack -p /opt/conda/envs/knife -o /opt/knife_env.tar || true
+mkdir -p /venv
+cd /venv
+tar -xf /opt/knife_env.tar || true
+rm -f /opt/knife_env.tar || true
+
+# ensure KNIFE code is readable and in a fixed location
+if [ -d /opt/KNIFE ]; then
+  chmod -R a+rX /opt/KNIFE || true
+fi
+
+Bootstrap: docker
+From: dh-mirror.gitverse.ru/library/debian
+Stage: final
+
+%files from devel
+/venv /venv
+/opt/KNIFE /opt/KNIFE
+
+%post
+
+apt update
+apt install python3 -y
+
+%environment
+export LC_ALL=C
+export PATH="/venv/bin:/opt/KNIFE/circularRNApipeline_Standalone:/opt/KNIFE/createJunctionIndex:/opt/KNIFE/circularRNApipeline_Cluster:$PATH"
+
+%help
+Apptainer definition for KNIFE pipeline.
+Copies the KNIFE repository into /opt/KNIFE and creates a condensed conda environment at /venv
+with Python2 and common bioinformatics tools used by the KNIFE scripts (bowtie2, samtools, bedtools, Biopython, etc.).
+
+Build: apptainer build KNIFE.sif KNIFE_apptainer.def
